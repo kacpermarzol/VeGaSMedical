@@ -175,10 +175,12 @@ class GaussianModel:
         m = torch.logit(torch.rand((fused_point_cloud.shape[0], 1), device="cuda"))
         sigma = torch.log(torch.rand((fused_point_cloud.shape[0], 1, 1), device="cuda") * 0.99 + 0.01)
         if self.use_dff:
+            print("USING DFF")
             time_func = torch.ones(self.frames-1, device="cuda")
             self.time_func = nn.Parameter(time_func.unsqueeze(-1).requires_grad_(True))
         else:
-            self.time_func = torch.linspace(0,1, self.frames-1) / (self.frames - 1)
+            print("NOT USING DFF")
+            self.time_func = torch.linspace(0,1, self.frames-1, device = "cuda") / (self.frames - 1)
 
         
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
