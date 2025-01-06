@@ -310,3 +310,4 @@ if __name__ == "__main__":
 
     # All done
     print("\nTraining complete.")
+    print()
