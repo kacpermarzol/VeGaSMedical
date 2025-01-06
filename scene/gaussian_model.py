@@ -360,7 +360,7 @@ class GaussianModel:
         if self.use_dff:
             self.time_func = nn.Parameter(torch.tensor(time_func, dtype=torch.float, device="cuda").requires_grad_(True))
         else:
-            self.time_func = torch.from_numpy(time_func)
+            self.time_func = torch.from_numpy(time_func).to("cuda")
 
         self._xyz = nn.Parameter(torch.tensor(xyz, dtype=torch.float, device="cuda").requires_grad_(True))
         self._features_dc = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
