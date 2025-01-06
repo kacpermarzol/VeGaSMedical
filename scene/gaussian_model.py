@@ -41,7 +41,7 @@ class GaussianModel:
         self.rotation_activation = torch.sigmoid
         self.m_activation = torch.softmax
 
-    def __init__(self, sh_degree : int, polynomial_degree : int = 1, frames: int=0):
+    def __init__(self, sh_degree : int, polynomial_degree : int = 1, frames: int=0, use_dff: bool=False):
         self.active_sh_degree = 0
         self.polynomial_degree = polynomial_degree
         self.max_sh_degree = sh_degree  
@@ -57,6 +57,7 @@ class GaussianModel:
         self._w1 = torch.empty(0)
         self.sigma = torch.empty(0)
         self.time_func = torch.empty(0)
+        self.use_dff = use_dff
         self.denom = torch.empty(0)
         self.optimizer = None
         self.percent_dense = 0
@@ -135,7 +136,10 @@ class GaussianModel:
     
     @property
     def get_time(self):
-        return torch.nn.functional.softmax(self.time_func.squeeze(), dim=0)
+        if self.use_dff:
+            return torch.nn.functional.softmax(self.time_func.squeeze(), dim=0)
+        else:
+            return self.time_func
     
     @property
     def get_features(self):
@@ -170,7 +174,12 @@ class GaussianModel:
         w1 = torch.rand((fused_point_cloud.shape[0], 2 * self.polynomial_degree), device="cuda") * 2.0 - 1.0
         m = torch.logit(torch.rand((fused_point_cloud.shape[0], 1), device="cuda"))
         sigma = torch.log(torch.rand((fused_point_cloud.shape[0], 1, 1), device="cuda") * 0.99 + 0.01)
-        time_func = torch.ones(self.frames-1, device="cuda")
+        if self.use_dff:
+            time_func = torch.ones(self.frames-1, device="cuda")
+            self.time_func = nn.Parameter(time_func.unsqueeze(-1).requires_grad_(True))
+        else:
+            self.time_func = torch.linspace(0,1, self.frames-1) / (self.frames - 1)
+
         
         opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
         fused_point_cloud[:,1] = 0 
@@ -186,7 +195,7 @@ class GaussianModel:
         self.m = nn.Parameter(m.requires_grad_(True))
         self.sigma = nn.Parameter(sigma.requires_grad_(True))
         self._w1 = nn.Parameter(w1.requires_grad_(True))
-        self.time_func = nn.Parameter(time_func.unsqueeze(-1).requires_grad_(True))
+
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
@@ -205,8 +214,11 @@ class GaussianModel:
             {'params': [self.m], 'lr': 0.001, "name": "m"},
             {'params': [self.sigma], 'lr': 0.001, "name": "sigma"},
             {'params': [self._w1], 'lr': 0.001, "name": "w1"},
-            {'params': [self.time_func], 'lr': 0.001, "name": "time_func"}
+            # {'params': [self.time_func], 'lr': 0.001, "name": "time_func"}
         ]
+
+        if self.use_dff:
+            l.append({'params': [self.time_func], 'lr': 0.001, "name": "time_func"})
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
         self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
@@ -343,6 +355,11 @@ class GaussianModel:
             time_func.append(plydata.elements[1][attr_name])
         time_func = np.array(time_func).flatten().reshape([-1,1])
 
+        if self.use_dff:
+            self.time_func = nn.Parameter(torch.tensor(time_func, dtype=torch.float, device="cuda").requires_grad_(True))
+        else:
+            self.time_func = time_func
+
         self._xyz = nn.Parameter(torch.tensor(xyz, dtype=torch.float, device="cuda").requires_grad_(True))
         self._features_dc = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(torch.tensor(features_extra, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
@@ -352,7 +369,6 @@ class GaussianModel:
         self.m = nn.Parameter(torch.tensor(m, dtype=torch.float, device="cuda").requires_grad_(True))
         self.sigma = nn.Parameter(torch.tensor(sigma, dtype=torch.float, device="cuda").unsqueeze(-1).requires_grad_(True))
         self._w1 = nn.Parameter(torch.tensor(w1, dtype=torch.float, device="cuda").requires_grad_(True))
-        self.time_func = nn.Parameter(torch.tensor(time_func, dtype=torch.float, device="cuda").requires_grad_(True))
         self.polynomial_degree = len(w1_names) // 2
         self.active_sh_degree = self.max_sh_degree
 

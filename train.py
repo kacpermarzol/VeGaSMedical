@@ -41,13 +41,13 @@ except ImportError:
 
 
 def training(gs_type, dataset: ModelParams, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint,
-             debug_from, save_xyz):
+             debug_from, save_xyz, use_dff):
     time_start = time.process_time()
     init_time = time.time()
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     frames = len(os.listdir(f'{dataset.source_path}/original'))
-    gaussians = gaussianModel[gs_type](dataset.sh_degree, dataset.poly_degree, frames)
+    gaussians = gaussianModel[gs_type](dataset.sh_degree, dataset.poly_degree, frames, use_dff = use_dff)
 
     scene = Scene(dataset, gaussians)
     gaussians.training_setup(opt)
@@ -277,6 +277,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_xyz", action='store_true')
     parser.add_argument("--poly_degree", type=int, default=7)
     parser.add_argument("--batch_size", type=int, default=3)
+    parser.add_argument("--use_dff", type=bool, default=False)
 
     lp = ModelParams(parser)
     args, _ = parser.parse_known_args(sys.argv[1:])
@@ -305,9 +306,8 @@ if __name__ == "__main__":
         args.gs_type,
         lp.extract(args), op.extract(args), pp.extract(args),
         args.test_iterations, args.save_iterations, args.checkpoint_iterations,
-        args.start_checkpoint, args.debug_from, args.save_xyz
+        args.start_checkpoint, args.debug_from, args.save_xyz, args.use_dff
     )
 
-    # All done
     print("\nTraining complete.")
     print()
