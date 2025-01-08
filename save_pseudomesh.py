@@ -66,21 +66,29 @@ def save_pseudomesh_info(
             t = 0 + torch.sum(time_func[:time]).repeat(means3D.shape[0],1)
 
             # shape: [num_gaussians, 2 * polynomial_degree] -> [num_gaussians, 2] x polynomial_degree
-            poly_weights = torch.chunk(gaussians._w1, chunks=gaussians.polynomial_degree, dim=-1)
 
-            means3D = means3D[:, [0, -1]]
-            center_gaussians = gaussians.get_m - t[0]
+            # poly_weights = torch.chunk(gaussians._w1, chunks=gaussians.polynomial_degree, dim=-1)
+            # means3D = means3D[:, [0, -1]]
+            # center_gaussians = gaussians.get_m - t[0]
+            #
+            # for i, poly_weight in enumerate(poly_weights):
+            #     means3D = means3D + poly_weight * (center_gaussians ** (i+1))
+            #
+            # means3D = torch.cat([
+            #         means3D[:, 0].unsqueeze(1),
+            #         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
+            #         means3D[:, -1].unsqueeze(1)
+            #     ],
+            #     dim=1
+            # )
 
-            for i, poly_weight in enumerate(poly_weights):
-                means3D = means3D + poly_weight * (center_gaussians ** (i+1))
+            means3D = gaussians._w1 * (gaussians.get_m - time[0])
+            means3D = torch.cat([means3D[:, 0].unsqueeze(1),
+                                 torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
+                                 means3D[:, -1].unsqueeze(1)]
+                                , dim=1)
 
-            means3D = torch.cat([
-                    means3D[:, 0].unsqueeze(1),
-                    torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
-                    means3D[:, -1].unsqueeze(1)
-                ],
-                dim=1
-            )
+
             delta = norm_gauss(gaussians.get_m.squeeze(), gaussians.get_sigma.squeeze(), t[0]).unsqueeze(-1)
             scales = gaussians.get_scaling
             scales = delta * scales

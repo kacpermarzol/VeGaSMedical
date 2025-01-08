@@ -102,12 +102,18 @@ def slice_gaussians(pc: GaussianModel, viewpoint_camera, pipe, foreground=False)
 
 
     # shape: [num_gaussians, 2 * polynomial_degree] -> [num_gaussians, 2] x polynomial_degree
-    poly_weights = torch.chunk(pc._w1, chunks=pc.polynomial_degree, dim=-1)
+    # poly_weights = torch.chunk(pc._w1, chunks=pc.polynomial_degree, dim=-1)
+    #
+    # means3D = means3D[:, [0, -1]]
+    # center_gaussians = pc.get_m - time[0]
+    # for i, poly_weight in enumerate(poly_weights):
+    #     means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
-    means3D = means3D[:, [0, -1]]
-    center_gaussians = pc.get_m - time[0]
-    for i, poly_weight in enumerate(poly_weights):
-        means3D = means3D + poly_weight * (center_gaussians ** (i+1))
+    means3D = pc._w1 * (pc.get_m - time[0])
+    means3D = torch.cat([means3D[:, 0].unsqueeze(1),
+                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
+                         means3D[:, -1].unsqueeze(1)]
+                        , dim=1)
 
     if foreground:
         means3D = torch.cat([means3D[:, 0].unsqueeze(1),
