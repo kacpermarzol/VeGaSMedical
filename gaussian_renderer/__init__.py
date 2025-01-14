@@ -122,8 +122,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         X = transformed_points[:, :2]  # Use the transformed x and y coordinates
         y = transformed_points[:, 2]  # Use the labels (0 or 1)
 
-        X = torch.tensor(X, dtype=torch.float32)  # Convert to float32 for computations
-        y = torch.tensor(y, dtype=torch.int)
+        X = torch.tensor(X, dtype=torch.float32).cuda() # Convert to float32 for computations
+        y = torch.tensor(y, dtype=torch.int).cuda()
 
         mask3 = knn_predict(means3D, X,y, k=10)
 
