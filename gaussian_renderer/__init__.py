@@ -120,7 +120,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         knn = KNeighborsClassifier(n_neighbors=10)
         knn.fit(X, y)
 
-        mask3 = knn.predict(means3D)
+        with torch.no_grad():
+            means3D_np = means3D.detach().cpu().numpy()
+
+        mask3 = knn.predict(means3D_np)
     else:
         mask3 = np.ones((means3D.shape[0]), dtype=bool)
 
