@@ -19,6 +19,11 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 
 
+def knn_predict(query_points, X, y, k=10):
+    dists = torch.cdist(query_points, X) ** 2
+    knn_indices = dists.topk(k, largest=False).indices
+    knn_labels = y[knn_indices]
+    return knn_labels.sum(dim=1) > (k // 2)
 
 def transform_vertices_function(vertices, c=1):
     vertices = vertices[:, [0, 2, 1]]
@@ -116,17 +121,14 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
         X = transformed_points[:, :2]  # Use the transformed x and y coordinates
         y = transformed_points[:, 2]  # Use the labels (0 or 1)
-        y = np.array([bool(label) for label in y])
 
-        knn = KNeighborsClassifier(n_neighbors=10)
-        knn.fit(X, y)
+        X = torch.tensor(X, dtype=torch.float32)  # Convert to float32 for computations
+        y = torch.tensor(y, dtype=torch.int)
 
-        with torch.no_grad():
-            means3D_x = means3D.detach().cpu()
+        mask3 = knn_predict(means3D, X,y, k=10)
 
-        mask3 = knn.predict(means3D_x)
     else:
-        mask3 = np.ones((means3D.shape[0]), dtype=bool)
+        mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
     print("done2")
 
