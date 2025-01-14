@@ -10,6 +10,7 @@ from utils.general_utils import safe_state
 from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from models import gaussianModelRender
+from PIL import Image
 
 
 def modify_func(means3D: torch.Tensor, # num_gauss x 3, means3D[:,1] = 0
@@ -25,13 +26,22 @@ def render_set( model_path,
                 pipeline, 
                 background, 
                 interp, 
-                extension):
+                extension,
+                mask_path):
     render_path = os.path.join(model_path, f"render")
 
     makedirs(render_path, exist_ok=True)
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         for i in range(interp):
-            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func)["render"].cpu()
+            if mask_path is not None:
+                file_name = f"{idx:04d}.png"  # Formats idx to 4 digits (e.g., 0001.png)
+                file_path = f"{mask_path}/{file_name}"  # Construct the full path
+                mask = Image.open(file_path)
+                mask = mask.convert('L')
+                mask = np.array(mask) / 255
+            else:
+                mask = None
+            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, mask_img=mask)["render"].cpu()
             torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + "_" + str(i) + extension))
 
 def render_sets(dataset : ModelParams,
@@ -40,7 +50,8 @@ def render_sets(dataset : ModelParams,
                 skip_train : bool, 
                 skip_test : bool, 
                 interp : int,
-                extension: str):
+                extension: str,
+                mask_path):
     with torch.no_grad():
         gaussians = gaussianModelRender['gs'](dataset.sh_degree)
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
@@ -48,7 +59,7 @@ def render_sets(dataset : ModelParams,
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
         
-        render_set(dataset.model_path, scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, interp, extension)
+        render_set(dataset.model_path, scene.loaded_iter, scene.getTestCameras(), gaussians, pipeline, background, interp, extension, mask_path)
 
 if __name__ == "__main__":
     # Set up command line argument parser
@@ -65,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--poly_degree", type=int, default=1)
     parser.add_argument("--interp", type=int, default=1)
     parser.add_argument("--extension", type=str, default=".png")
+    parser.add_argument("--mask_path", type=str, default=None)
 
     args = get_combined_args(parser)
     model.gs_type = "gs"
@@ -78,4 +90,4 @@ if __name__ == "__main__":
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
-    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.interp, args.extension)
+    render_sets(model.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.interp, args.extension, mask_path=args.mask_path)

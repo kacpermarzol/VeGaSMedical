@@ -15,6 +15,9 @@ from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianR
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 import trimesh
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+
 
 
 def transform_vertices_function(vertices, c=1):
@@ -27,7 +30,7 @@ def norm_gauss(m, sigma, t):
     log = ((m - t)**2 / sigma**2) / -2
     return torch.exp(log)
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, mask_img=None):
     """
     Render the scene. 
     
@@ -91,14 +94,38 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     # means3D = means3D[:, [0, -1]] + pc._w1 * (pc.get_m - time[0])
     means3D = means3D[:, [0, -1]]
-    print("means3d: ", means3D)
-    print("means3d shape: ", means3D.shape)
-    print("means3d min: ", means3D.min(dim=0))
-    print("means3d max: ", means3D.max(dim=0))
 
     center_gaussians = pc.get_m - time[0]
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
+
+
+    if mask_img is not None:
+        x_min, x_max = -3, 3
+        y_min, y_max = -3, 2
+        h, w = mask_img.shape
+        transformed_points = []
+
+        for x in range(w):
+            for y in range(h):
+                x_new = (x / (w - 1)) * (x_max - x_min) + x_min
+                y_new = (y / (h - 1)) * (y_max - y_min) + y_min
+                transformed_points.append([x_new, y_new, mask_img[y, x]])
+        transformed_points = np.array(transformed_points)
+
+        X = transformed_points[:, :2]  # Use the transformed x and y coordinates
+        y = transformed_points[:, 2]  # Use the labels (0 or 1)
+        y = np.array([bool(label) for label in y])
+
+        knn = KNeighborsClassifier(n_neighbors=10)
+        knn.fit(X, y)
+
+        mask3 = knn.predict(means3D)
+    else:
+        mask3 = np.ones((means3D.shape[0]), dtype=bool)
+
+
+
 
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
@@ -112,14 +139,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     mask1 = (delta > 0.01).all(dim=1)
     s = scales[:,[0,-1]]
     mask2 = (s > 0.0001).all(dim=1)
-    mask = torch.logical_and(mask1, mask2)
+    mask = torch.logical_and(mask1, mask2, mask3)
 
-    print("MASK: ", mask)
-    print("MASKshape: ", mask.shape)
-    # print("means3d: ", means3D)
-    # print("means3d shape: ", means3D.shape)
-    # print("means3d min: ", means3D.min(dim=0))
-    # print("means3d max: ", means3D.max(dim=0))
+
+
 
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
