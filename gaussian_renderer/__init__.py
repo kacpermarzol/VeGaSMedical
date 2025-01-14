@@ -119,14 +119,26 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
                 transformed_points.append([x_new, y_new, mask_img[y, x]])
         transformed_points = np.array(transformed_points)
 
-        X = transformed_points[:, :2]  # Use the transformed x and y coordinates
-        y = transformed_points[:, 2]  # Use the labels (0 or 1)
+        X = transformed_points[:, :2]
+        y = transformed_points[:, 2]
 
-        X = torch.tensor(X, dtype=torch.float32).cuda() # Convert to float32 for computations
+        X = torch.tensor(X, dtype=torch.float32).cuda()
         y = torch.tensor(y, dtype=torch.int).cuda()
 
-        mask3 = knn_predict(means3D, X,y, k=10)
+        batch_size = 50000
+        num_points = means3D.shape[0]
 
+        num_batches = (num_points + batch_size - 1) // batch_size
+        mask3_all = []
+
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min((batch_idx + 1) * batch_size, num_points)
+            means3D_batch = means3D[start_idx:end_idx].cuda()
+            mask3_batch = knn_predict(means3D_batch, X, y, k=7)
+            mask3_all.append(mask3_batch)
+
+        mask3 = torch.cat(mask3_all, dim=0)
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
