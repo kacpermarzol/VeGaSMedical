@@ -34,7 +34,7 @@ def render_set( model_path,
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         for i in range(interp):
             if mask_path is not None:
-                file_name = f"{idx:04d}.png"  # Formats idx to 4 digits (e.g., 0001.png)
+                file_name = f"{idx+1:04d}.png"  # Formats idx to 4 digits (e.g., 0001.png)
                 file_path = f"{mask_path}/{file_name}"  # Construct the full path
                 mask = Image.open(file_path)
                 mask = mask.convert('L')
