@@ -113,6 +113,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     print("MASKshape: ", mask.shape)
     print("means3d: ", means3D)
     print("means3d shape: ", means3D.shape)
+    print("means3d min: ", means3D.min(dim=0))
+    print("means3d max: ", means3D.max(dim=0))
 
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
