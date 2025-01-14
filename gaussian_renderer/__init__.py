@@ -91,6 +91,11 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     # means3D = means3D[:, [0, -1]] + pc._w1 * (pc.get_m - time[0])
     means3D = means3D[:, [0, -1]]
+    print("means3d: ", means3D)
+    print("means3d shape: ", means3D.shape)
+    print("means3d min: ", means3D.min(dim=0))
+    print("means3d max: ", means3D.max(dim=0))
+
     center_gaussians = pc.get_m - time[0]
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
@@ -111,10 +116,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     print("MASK: ", mask)
     print("MASKshape: ", mask.shape)
-    print("means3d: ", means3D)
-    print("means3d shape: ", means3D.shape)
-    print("means3d min: ", means3D.min(dim=0))
-    print("means3d max: ", means3D.max(dim=0))
+    # print("means3d: ", means3D)
+    # print("means3d shape: ", means3D.shape)
+    # print("means3d min: ", means3D.min(dim=0))
+    # print("means3d max: ", means3D.max(dim=0))
 
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
