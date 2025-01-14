@@ -128,7 +128,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         mask3 = np.ones((means3D.shape[0]), dtype=bool)
 
 
-
+    print("done")
 
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
@@ -142,10 +142,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     mask1 = (delta > 0.01).all(dim=1)
     s = scales[:,[0,-1]]
     mask2 = (s > 0.0001).all(dim=1)
-    mask = torch.logical_and(mask1, mask2, mask3)
-
-
-
+    mask = mask1 & mask2 & mask3
 
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
