@@ -122,7 +122,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         knn.fit(X, y)
 
         with torch.no_grad():
-            means3D_x = means3D.detach()
+            means3D_x = means3D.detach().cpu()
 
         mask3 = knn.predict(means3D_x)
     else:
