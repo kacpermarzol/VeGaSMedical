@@ -125,7 +125,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         X = torch.tensor(X, dtype=torch.float32).cuda()
         y = torch.tensor(y, dtype=torch.int).cuda()
 
-        batch_size = 50000
+        batch_size = 10000
         num_points = means3D.shape[0]
 
         num_batches = (num_points + batch_size - 1) // batch_size
