@@ -100,16 +100,19 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     # means3D = means3D[:, [0, -1]] + pc._w1 * (pc.get_m - time[0])
     means3D = means3D[:, [0, -1]]
 
+
     center_gaussians = pc.get_m - time[0]
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
+    print("MEANs 3d ", means3D.min(dim=0))
+    print("MEANs 3d ", means3D.max(dim=0))
     print("done1")
 
 
     if mask_img is not None:
-        x_min, x_max = -2.5, 2.5
-        y_min, y_max = -2.5, 1.5
+        x_min, x_max = -3, 3
+        y_min, y_max = -3, 2.5
 
         h, w = mask_img.shape
 
