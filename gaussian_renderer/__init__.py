@@ -111,8 +111,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
 
     if mask_img is not None:
-        x_min, x_max = -1, 1
-        y_min, y_max = -0.5, 0.25
+        x_min, x_max = -0.5, 0.5
+        y_min, y_max = -0.2, 0.3
 
         h, w = mask_img.shape
 
