@@ -111,8 +111,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
 
     if mask_img is not None:
-        x_min, x_max = -3, 3
-        y_min, y_max = -3, 2.5
+        x_min, x_max = -5, 5
+        y_min, y_max = -5 ,5
 
         h, w = mask_img.shape
 
@@ -150,8 +150,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
     print("done2")
-
-
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
