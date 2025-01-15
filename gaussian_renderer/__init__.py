@@ -106,18 +106,22 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     print("done1")
 
-    if mask_img is not None:
-        x_min, x_max = -3, 3
-        y_min, y_max = -3, 2
-        h, w = mask_img.shape
-        transformed_points = []
 
-        for x in range(w):
-            for y in range(h):
-                x_new = (x / (w - 1)) * (x_max - x_min) + x_min
-                y_new = (y / (h - 1)) * (y_max - y_min) + y_min
-                transformed_points.append([x_new, y_new, mask_img[y, x]])
-        transformed_points = np.array(transformed_points)
+    if mask_img is not None:
+        x_min, x_max = -2.5, 2.5
+        y_min, y_max = -2.5, 1.5
+
+        h, w = mask_img.shape
+
+        x_indices = np.arange(w)
+        y_indices = np.arange(h)
+
+        X_indices, Y_indices = np.meshgrid(x_indices, y_indices)
+
+        x_new = (X_indices / (w - 1)) * (x_max - x_min) + x_min
+        y_new = (Y_indices / (h - 1)) * (y_min - y_max) + y_max
+
+        transformed_points = np.column_stack((x_new.flatten(), y_new.flatten(), mask_img.flatten()))
 
         X = transformed_points[:, :2]
         y = transformed_points[:, 2]

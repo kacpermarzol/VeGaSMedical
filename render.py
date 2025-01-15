@@ -43,7 +43,7 @@ def render_set( model_path,
             else:
                 mask = None
             rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, mask_img=mask)["render"].cpu()
-            torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + "_" + str(i) + extension))
+            torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx+80) + "_" + str(i) + extension))
 
 def render_sets(dataset : ModelParams,
                 iteration : int, 
