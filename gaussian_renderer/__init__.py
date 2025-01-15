@@ -109,6 +109,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     mask2 = (s > 0.0001).all(dim=1)
     mask = torch.logical_and(mask1, mask2)
 
+    torch.save(means3D.cpu(), 'means_orig.pt')
+    torch.save(means3D[mask].cpu(), 'means_masked.pt')
+
+
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
 
