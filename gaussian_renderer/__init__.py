@@ -109,7 +109,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     if mask_means is not None:
         hull = ConvexHull(mask_means.cpu().numpy())
-        A = torch.tensor(hull.equations[:, :-1], device=means3D.device)
+        A = torch.tensor(hull.equations[:, :-1], device=means3D.device).float()
         b = torch.tensor(hull.equations[:, -1], device=means3D.device)
         mask3 = torch.all(torch.matmul(means3D, A.T) + b <= 0, dim=1)
     else:
