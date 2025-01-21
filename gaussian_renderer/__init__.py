@@ -15,6 +15,7 @@ from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianR
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 import trimesh
+import os
 
 
 def transform_vertices_function(vertices, c=1):
@@ -27,7 +28,7 @@ def norm_gauss(m, sigma, t):
     log = ((m - t)**2 / sigma**2) / -2
     return torch.exp(log)
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, idx=-1):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, idx=-1, means_path=None):
     """
     Render the scene. 
     
@@ -95,8 +96,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
-    if idx != -1:
-        torch.save(means3D, 'means_{0:05d}'.format(idx))
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
@@ -111,9 +110,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     mask2 = (s > 0.0001).all(dim=1)
     mask = torch.logical_and(mask1, mask2)
 
-    torch.save(means3D.cpu(), 'means_orig.pt')
-    torch.save(means3D[mask].cpu(), 'means_masked.pt')
-
+    if idx != -1:
+        torch.save(means3D[mask], os.path.join(means_path, '{0:05d}'.format(idx) + '.pt'))
 
     if modify_func != None:
         means3D, scales, rotations = modify_func(means3D, scales, rotations, time[0])
