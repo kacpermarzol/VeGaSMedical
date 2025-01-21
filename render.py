@@ -39,7 +39,6 @@ def render_set( model_path,
                 file_path = f"{mask_path}/{file_name}"
                 mask_means = torch.load(file_path)
                 mask_means = mask_means[:, [0, -1]]
-                print(mask_means)
             else:
                 mask_means = None
             rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, mask_means=mask_means)["render"].cpu()

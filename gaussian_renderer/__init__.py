@@ -108,14 +108,17 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
     if mask_means is not None:
-        hull = ConvexHull(mask_means.cpu().numpy())
-        A = torch.tensor(hull.equations[:, :-1], device=means3D.device).float()
-        b = torch.tensor(hull.equations[:, -1], device=means3D.device)
-        mask3 = torch.all(torch.matmul(means3D, A.T) + b <= 0, dim=1)
+        if len(mask_means)<3:
+            print("if")
+            mask3 = torch.zeros((means3D.shape[0]), dtype=bool)
+        else:
+            hull = ConvexHull(mask_means.cpu().numpy())
+            A = torch.tensor(hull.equations[:, :-1], device=means3D.device).float()
+            b = torch.tensor(hull.equations[:, -1], device=means3D.device)
+            mask3 = torch.all(torch.matmul(means3D, A.T) + b <= 0, dim=1)
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
-    print("AA ", len(mask3), sum(mask3))
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
@@ -129,8 +132,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     s = scales[:,[0,-1]]
     mask2 = (s > 0.0001).all(dim=1)
     mask = mask1 & mask2 & mask3
-    print("BB ", len(mask), sum(mask))
-    print()
 
 
     if modify_func != None:
