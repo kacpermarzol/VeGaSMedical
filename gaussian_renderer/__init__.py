@@ -108,10 +108,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
     if mask_means is not None:
-        hull = ConvexHull(mask_means.cpu())
-        A = hull.equations[:, :-1]
-        b = hull.equations[:, -1]
-        mask3 = np.all(np.dot(means3D.cpu(), A.T) + b <= 0, axis=1)
+        hull = ConvexHull(mask_means.cpu().numpy())
+        A = torch.tensor(hull.equations[:, :-1], device=means3D.device)
+        b = torch.tensor(hull.equations[:, -1], device=means3D.device)
+        mask3 = torch.all(torch.matmul(means3D, A.T) + b <= 0, dim=1)
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
@@ -119,7 +119,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
                         means3D[:, -1].unsqueeze(1)]
-                        , dim=1)
+                        ,dim=1)
     
     delta = norm_gauss(pc.get_m.squeeze(), pc.get_sigma.squeeze(), time[0]).unsqueeze(-1)
     scales = delta * pc.get_scaling 
