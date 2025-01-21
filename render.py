@@ -35,14 +35,13 @@ def render_set( model_path,
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         for i in range(interp):
             if mask_path is not None:
-                file_name = f"{idx+1:04d}.png"  # Formats idx to 4 digits (e.g., 0001.png)
-                file_path = f"{mask_path}/{file_name}"  # Construct the full path
-                mask = Image.open(file_path)
-                mask = mask.convert('L')
-                mask = np.array(mask) / 255
+                file_name = f"{idx:05d}.pt"
+                file_path = f"{mask_path}/{file_name}"
+                mask_means = torch.load(file_path)
+                mask_means = mask_means[:, [0, -1]]
             else:
-                mask = None
-            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, mask_img=mask)["render"].cpu()
+                mask_means = None
+            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, mask_means=mask_means)["render"].cpu()
             torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + "_" + str(i) + extension))
 
 def render_sets(dataset : ModelParams,

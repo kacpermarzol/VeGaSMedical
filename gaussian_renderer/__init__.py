@@ -17,6 +17,8 @@ from utils.sh_utils import eval_sh
 import trimesh
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
+from scipy.spatial import ConvexHull
+
 
 
 def knn_predict(query_points, X, y, k=10):
@@ -35,7 +37,7 @@ def norm_gauss(m, sigma, t):
     log = ((m - t)**2 / sigma**2) / -2
     return torch.exp(log)
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, mask_img=None):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, mask_means=None):
     """
     Render the scene. 
     
@@ -105,44 +107,14 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
-    if mask_img is not None:
-        x_min, x_max = -0.45, 0.45
-        y_min, y_max = -0.15, 0.25
-
-        h, w = mask_img.shape
-
-        x_indices = np.arange(w)
-        y_indices = np.arange(h)
-
-        X_indices, Y_indices = np.meshgrid(x_indices, y_indices)
-
-        x_new = (X_indices / (w - 1)) * (x_max - x_min) + x_min
-        y_new = (Y_indices / (h - 1)) * (y_min - y_max) + y_max
-
-        transformed_points = np.column_stack((x_new.flatten(), y_new.flatten(), mask_img.flatten()))
-
-        X = transformed_points[:, :2]
-        y = transformed_points[:, 2]
-
-        X = torch.tensor(X, dtype=torch.float32).cuda()
-        y = torch.tensor(y, dtype=torch.int).cuda()
-
-        batch_size = 10000
-        num_points = means3D.shape[0]
-
-        num_batches = (num_points + batch_size - 1) // batch_size
-        mask3_all = []
-
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * batch_size
-            end_idx = min((batch_idx + 1) * batch_size, num_points)
-            means3D_batch = means3D[start_idx:end_idx].cuda()
-            mask3_batch = knn_predict(means3D_batch, X, y, k=7)
-            mask3_all.append(mask3_batch)
-
-        mask3 = torch.cat(mask3_all, dim=0)
+    if mask_means is not None:
+        hull = ConvexHull(mask_means)
+        A = hull.equations[:, :-1]
+        b = hull.equations[:, -1]
+        mask3 = np.all(np.dot(means3D, A.T) + b <= 0, axis=1)
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
+
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
