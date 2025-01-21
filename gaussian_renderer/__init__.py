@@ -27,7 +27,7 @@ def norm_gauss(m, sigma, t):
     log = ((m - t)**2 / sigma**2) / -2
     return torch.exp(log)
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, interp=1, interp_idx=0, modify_func=None, idx=-1):
     """
     Render the scene. 
     
@@ -95,6 +95,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     for i, poly_weight in enumerate(poly_weights):
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
+    if idx != -1:
+        torch.save(means3D, 'means_{0:05d}'.format(idx))
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),

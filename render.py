@@ -31,7 +31,7 @@ def render_set( model_path,
     makedirs(render_path, exist_ok=True)
     for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
         for i in range(interp):
-            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func)["render"].cpu()
+            rendering = render(view, gaussians, pipeline, background, interp=interp, interp_idx=i, modify_func=modify_func, idx=idx)["render"].cpu()
             torchvision.utils.save_image(rendering, os.path.join(render_path, '{0:05d}'.format(idx) + "_" + str(i) + extension))
 
 def render_sets(dataset : ModelParams,
