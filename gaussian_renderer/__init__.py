@@ -129,7 +129,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
                 _, indices = torch.topk(distances, k=10, largest=False, sorted=False)
                 neighbors = mask_means[indices[:, 1:]]
                 centroids = torch.mean(neighbors, dim=1)
-                distance_to_centroids = torch.norm(means3D - centroids, dim=1)
+                distance_to_centroids = torch.norm(means3D_batch - centroids, dim=1)
                 mask3_chunk = distance_to_centroids < 0.005
                 mask3_all.append(mask3_chunk)
 
