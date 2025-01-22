@@ -115,7 +115,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             nbrs = NearestNeighbors(n_neighbors=10)
             nbrs.fit(mask_means.cpu())
             distances, indices = nbrs.kneighbors(means3D.cpu())
-            neighbors = mask_means.numpy()[indices[:, 1:]]
+            neighbors = mask_means.cpu().numpy()[indices[:, 1:]]
             neighbors = torch.tensor(neighbors, dtype=torch.float32)
             centroids = torch.mean(neighbors, dim=1)
             distance_to_centroids = torch.norm(means3D - centroids, dim=1)
