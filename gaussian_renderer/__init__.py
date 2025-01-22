@@ -112,14 +112,29 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         if len(mask_means)<11:
             mask3 = torch.zeros((means3D.shape[0]), dtype=bool, device=means3D.device)
         else:
-            means3D_expanded = means3D.unsqueeze(1)
             mask_means_expanded = mask_means.unsqueeze(0)
-            distances = torch.sum((means3D_expanded - mask_means_expanded) ** 2, dim=2)
-            _, indices = torch.topk(distances, k=10, largest=False, sorted=False)
-            neighbors = mask_means[indices[:, 1:]]
-            centroids = torch.mean(neighbors, dim=1)
-            distance_to_centroids = torch.norm(means3D - centroids, dim=1)
-            mask3 = distance_to_centroids < 0.005
+
+            batch_size = 10000
+            num_points = means3D.shape[0]
+
+            num_batches = (num_points + batch_size - 1) // batch_size
+            mask3_all = []
+
+            for batch_idx in range(num_batches):
+                start_idx = batch_idx * batch_size
+                end_idx = min((batch_idx + 1) * batch_size, num_points)
+                means3D_batch = means3D[start_idx:end_idx].cuda()
+                means3D_expanded = means3D_batch.unsqueeze(1)
+                distances = torch.sum((means3D_expanded - mask_means_expanded) ** 2, dim=2)
+                _, indices = torch.topk(distances, k=10, largest=False, sorted=False)
+                neighbors = mask_means[indices[:, 1:]]
+                centroids = torch.mean(neighbors, dim=1)
+                distance_to_centroids = torch.norm(means3D - centroids, dim=1)
+                mask3_chunk = distance_to_centroids < 0.005
+                mask3_all.append(mask3_chunk)
+
+            mask3 = torch.cat(mask3_all, dim=0)
+
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
 
