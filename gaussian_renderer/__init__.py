@@ -18,7 +18,7 @@ import trimesh
 import numpy as np
 # from sklearn.neighbors import KNeighborsClassifier
 # from scipy.spatial import ConvexHull
-from sklearn.neighbors import NearestNeighbors
+# from sklearn.neighbors import NearestNeighbors
 
 
 
@@ -109,15 +109,15 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         means3D = means3D + poly_weight * (center_gaussians ** (i+1))
 
     if mask_means is not None:
-        if len(mask_means)<3:
+        if len(mask_means)<11:
             mask3 = torch.zeros((means3D.shape[0]), dtype=bool, device=means3D.device)
         else:
-            nbrs = NearestNeighbors(n_neighbors=10)
-            nbrs.fit(mask_means.cpu())
-            distances, indices = nbrs.kneighbors(means3D.cpu())
-            neighbors = mask_means.cpu().numpy()[indices[:, 1:]]
-            neighbors = torch.tensor(neighbors, dtype=torch.float32)
-            centroids = torch.mean(neighbors, dim=1).cuda()
+            means3D_expanded = means3D.unsqueeze(1)
+            mask_means_expanded = mask_means.unsqueeze(0)
+            distances = torch.sum((means3D_expanded - mask_means_expanded) ** 2, dim=2)
+            _, indices = torch.topk(distances, k=10, largest=False, sorted=False)
+            neighbors = mask_means[indices[:, 1:]]
+            centroids = torch.mean(neighbors, dim=1)
             distance_to_centroids = torch.norm(means3D - centroids, dim=1)
             mask3 = distance_to_centroids < 0.005
     else:
