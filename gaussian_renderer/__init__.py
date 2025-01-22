@@ -16,8 +16,9 @@ from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 import trimesh
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
-from scipy.spatial import ConvexHull
+# from sklearn.neighbors import KNeighborsClassifier
+# from scipy.spatial import ConvexHull
+from sklearn.neighbors import NearestNeighbors
 
 
 
@@ -111,13 +112,16 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         if len(mask_means)<3:
             mask3 = torch.zeros((means3D.shape[0]), dtype=bool, device=means3D.device)
         else:
-            hull = ConvexHull(mask_means.cpu().numpy())
-            A = torch.tensor(hull.equations[:, :-1], device=means3D.device).float()
-            b = torch.tensor(hull.equations[:, -1], device=means3D.device)
-            mask3 = torch.all(torch.matmul(means3D, A.T) + b <= 0, dim=1)
+            nbrs = NearestNeighbors(n_neighbors=10)
+            nbrs.fit(mask_means)
+            distances, indices = nbrs.kneighbors(means3D)
+            neighbors = mask_means.numpy()[indices[:, 1:]]
+            neighbors = torch.tensor(neighbors, dtype=torch.float32)
+            centroids = torch.mean(neighbors, dim=1)
+            distance_to_centroids = torch.norm(means3D - centroids, dim=1)
+            mask3 = distance_to_centroids < 0.005
     else:
         mask3 = torch.ones((means3D.shape[0]), dtype=bool)
-
 
     means3D = torch.cat([means3D[:, 0].unsqueeze(1),
                         torch.zeros(means3D[:, 0].shape).unsqueeze(1).cuda(),
